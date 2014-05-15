@@ -21,6 +21,7 @@ public class ZooKeeperConnectionWatch implements Watcher {
 	@Override
 	public void process(WatchedEvent event) {
 		if (event.getState() == Event.KeeperState.SyncConnected) {
+			System.out.println("Connected...");
 			_connectedSignal.countDown();
 		}
 	}
