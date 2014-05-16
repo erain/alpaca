@@ -25,9 +25,9 @@ public class JoinGroup extends ZooKeeperConnectionWatch {
 		JoinGroup joinGroup = new JoinGroup();
 		joinGroup.connect(_properties.getProperty("zookeeper.hosts"));
 		joinGroup.join("test", "node1");
-		
+
 		// stay alive until process is killed or thread is interrupted
 		Thread.sleep(Long.MAX_VALUE);
 	}
-	
+
 }

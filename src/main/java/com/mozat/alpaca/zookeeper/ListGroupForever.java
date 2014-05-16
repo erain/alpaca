@@ -16,7 +16,7 @@ import com.mozat.alpaca.util.ZooKeeperConnectionHelper;
 
 public class ListGroupForever {
 
-	private static final Properties _properties = AppBase.properties;
+	private static final Properties PROPERTIES = AppBase.properties;
 	private ZooKeeper _zooKeeper;
 	private Semaphore _semaphore = new Semaphore(1);
 
@@ -56,11 +56,11 @@ public class ListGroupForever {
 		System.out.println(chidren);
 		System.out.println("---------------------------");
 	}
-	
+
 	public static void main(String[] args) throws Exception {
-		String hosts = _properties.getProperty("zookeeper.hosts");
+		String hosts = PROPERTIES.getProperty("zookeeper.hosts");
 		ZooKeeper zk = new ZooKeeperConnectionHelper().connect(hosts);
 		new ListGroupForever(zk).listForever("test");
 	}
-	
+
 }
