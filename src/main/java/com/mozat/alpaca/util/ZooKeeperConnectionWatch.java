@@ -1,4 +1,4 @@
-package com.mozat.alpaca.zookeeper;
+package com.mozat.alpaca.util;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;

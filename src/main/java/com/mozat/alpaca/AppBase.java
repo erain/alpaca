@@ -5,8 +5,8 @@ import java.util.Properties;
 
 public class AppBase {
 	
-	private static final AppBase INSTANCE = new AppBase();
-	public static AppBase getInstance() { return INSTANCE; }
+	private static final AppBase _instance = new AppBase();
+	public static AppBase getInstance() { return _instance; }
 
 	public static Properties properties;
 	
