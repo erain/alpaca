@@ -12,7 +12,7 @@ import static org.apache.zookeeper.AsyncCallback.ChildrenCallback;
 
 /**
  * This class will demo whether the watch is still there when network partition happens
- * @author Yi Yu<YiYu@Ymail.com>
+ * @author Yi Yu
  */
 public class NodeNotifier implements Watcher{
 
@@ -30,7 +30,7 @@ public class NodeNotifier implements Watcher{
         if ( event.getType() == Event.EventType.None ) {
             switch (event.getState()) {
                 case SyncConnected:
-                    getNodes();
+                    logger.info("Connecting to ZooKeeper!");
                     connected = true;
                     break;
                 case Disconnected:
@@ -103,6 +103,8 @@ public class NodeNotifier implements Watcher{
         while (!nodeNotifier.isConnected()) {
             Thread.sleep(100);
         }
+
+        nodeNotifier.getNodes();
 
         while (!nodeNotifier.isExpired()) {
             Thread.sleep(1000);
