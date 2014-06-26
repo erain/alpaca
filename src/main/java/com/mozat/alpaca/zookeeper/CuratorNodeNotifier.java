@@ -7,9 +7,14 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
 import org.apache.curator.framework.api.CuratorListener;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.curator.utils.CloseableUtils;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.Watcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +26,7 @@ public class CuratorNodeNotifier {
     private static final Logger logger = LoggerFactory.getLogger(CuratorNodeNotifier.class);
 
     private CuratorFramework zk;
+    private PathChildrenCache cache;
     private final String zkHostPort = App.config.getString("zookeeper.hosts");
 
     private volatile boolean connected = false;
@@ -38,26 +44,20 @@ public class CuratorNodeNotifier {
                 .connectionTimeoutMs(5000)
                 .build();
         zk.getConnectionStateListenable().addListener(new ZKConnectionStateListener());
-
         zk.start();
-    }
 
-    void getNodes() throws Exception {
-        logger.info("Getting all the nodes under /nodes...");
-
-        zk.getCuratorListenable().addListener(new ZKMasterListen());
-
-        List<String> children =  zk.getChildren().watched().forPath("/nodes");
-        if (children != null) {
-            for (String child: children) {
-                System.out.println(child);
-            }
-            System.out.println("===========================");
+        try {
+            cache = new PathChildrenCache(zk, "/nodes", true);
+            cache.start();
+        } catch (Exception e) {
+            logger.error("Error in starting path cache: {}", e.getMessage(), e);
         }
     }
 
+
     void stopZK() {
-        zk.close();
+        CloseableUtils.closeQuietly(cache);
+        CloseableUtils.closeQuietly(zk);
     }
 
     boolean isConnected() {
@@ -76,14 +76,48 @@ public class CuratorNodeNotifier {
             Thread.sleep(100);
         }
 
-        curatorNodeNotifier.getNodes();
+        curatorNodeNotifier.addListener(curatorNodeNotifier.cache);
+        curatorNodeNotifier.outputPath();
 
         while (!curatorNodeNotifier.isExpired()) {
             Thread.sleep(1000);
         }
 
         curatorNodeNotifier.stopZK();
+    }
 
+    void outputPath() throws Exception {
+        System.out.println("*****");
+        List<String> nodes = ZKPaths.getSortedChildren(zk.getZookeeperClient().getZooKeeper(), "/nodes");
+        if (nodes != null) {
+            for (String node : nodes) {
+                System.out.println(node);
+            }
+            System.out.println("---------------------");
+        }
+    }
+
+    private void addListener(PathChildrenCache cache) {
+        PathChildrenCacheListener listener = new PathChildrenCacheListener() {
+            @Override
+            public void childEvent(CuratorFramework zk, PathChildrenCacheEvent event) throws Exception {
+                switch (event.getType()) {
+                    case CHILD_ADDED:
+                        System.out.println("Node added: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
+                        outputPath();
+                        break;
+                    case CHILD_UPDATED:
+                        System.out.println("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
+                        outputPath();
+                        break;
+                    case CHILD_REMOVED:
+                        System.out.println("Node removed: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
+                        outputPath();
+                        break;
+                }
+            }
+        };
+        cache.getListenable().addListener(listener);
     }
 
     class ZKConnectionStateListener implements ConnectionStateListener {
@@ -115,17 +149,4 @@ public class CuratorNodeNotifier {
         }
     }
 
-    class ZKMasterListen implements CuratorListener {
-
-        @Override
-        public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception {
-            try {
-                if (event.getWatchedEvent().getType() == Watcher.Event.EventType.NodeChildrenChanged) {
-                    getNodes();
-                }
-            } catch (Exception e) {
-                logger.error("shit happend: {}", e.getMessage(), e);
-            }
-        }
-    }
 }
